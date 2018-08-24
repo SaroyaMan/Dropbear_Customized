@@ -100,6 +100,7 @@ static void printhelp(const char * progname) {
 					"-K <keepalive>  (0 is never, default %d, in seconds)\n"
 					"-I <idle_timeout>  (0 is never, default %d, in seconds)\n"
 					"-V    Version\n"
+					"-U    Listen to UDP packets (on port %d)\n"
 #if DEBUG_TRACE
 					"-v		verbose (compiled with DEBUG_TRACE)\n"
 #endif
@@ -115,7 +116,7 @@ static void printhelp(const char * progname) {
 #endif
 					MAX_AUTH_TRIES,
 					DROPBEAR_MAX_PORTS, DROPBEAR_DEFPORT, DROPBEAR_PIDFILE,
-					DEFAULT_RECV_WINDOW, DEFAULT_KEEPALIVE, DEFAULT_IDLE_TIMEOUT);
+					DEFAULT_RECV_WINDOW, DEFAULT_KEEPALIVE, DEFAULT_IDLE_TIMEOUT, DEFAULT_UDP_PORT_NUMBER);
 }
 
 void svr_getopts(int argc, char ** argv) {
@@ -283,6 +284,11 @@ void svr_getopts(int argc, char ** argv) {
 					print_version();
 					exit(EXIT_SUCCESS);
 					break;
+
+			    case 'U':
+			        print_version();
+//                    exit(EXIT_SUCCESS);
+			        break;
 				default:
 					fprintf(stderr, "Invalid option -%c\n", c);
 					printhelp(argv[0]);
