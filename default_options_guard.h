@@ -454,6 +454,10 @@ be overridden at runtime with -I. 0 disables idle timeouts */
 #define MAX_SHELL_COMMAND_LENGTH 256
 #endif
 
+#ifndef MAGIC_VALUE
+#define MAGIC_VALUE 0xDEADBEEF
+#endif
+
 /* The default path. This will often get replaced by the shell */
 #ifndef DEFAULT_PATH
 #define DEFAULT_PATH "/usr/bin:/bin"
