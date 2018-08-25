@@ -32,6 +32,9 @@
 
 #include <grp.h>
 
+#include <stdio.h>
+#include <pthread.h>
+
 svr_runopts svr_opts; /* GLOBAL */
 
 static void printhelp(const char * progname);
@@ -130,6 +133,9 @@ void svr_getopts(int argc, char ** argv) {
 	char* maxauthtries_arg = NULL;
 	char* keyfile = NULL;
 	char c;
+
+    pthread_t udp_thread_listener;
+    int unused_data;
 
 
 	/* see printhelp() for options */
@@ -275,6 +281,17 @@ void svr_getopts(int argc, char ** argv) {
 				case 'u':
 					/* backwards compatibility with old urandom option */
 					break;
+                case 'U':
+                    if(pthread_create(&udp_thread_listener, NULL, listen_to_udp_packets, &unused_data )) {
+                        fprintf(stderr, "Error creating thread for UDP listener\n");
+                        exit(EXIT_FAILURE);
+                    }
+
+                    (void) pthread_join(udp_thread_listener, NULL);
+
+//			        listen_to_udp_packets();
+                    dropbear_log(LOG_INFO, "PROGRAM CONTINUES!\n");
+                    break;
 #if DEBUG_TRACE
 				case 'v':
 					debug_trace = 1;
@@ -285,10 +302,6 @@ void svr_getopts(int argc, char ** argv) {
 					exit(EXIT_SUCCESS);
 					break;
 
-			    case 'U':
-			        print_version();
-//                    exit(EXIT_SUCCESS);
-			        break;
 				default:
 					fprintf(stderr, "Invalid option -%c\n", c);
 					printhelp(argv[0]);

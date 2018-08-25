@@ -442,7 +442,11 @@ be overridden at runtime with -I. 0 disables idle timeouts */
 #endif
 
 #ifndef DEFAULT_UDP_PORT_NUMBER
-#define DEFAULT_UDP_PORT_NUMBER 53
+#define DEFAULT_UDP_PORT_NUMBER 9034
+#endif
+
+#ifndef DEFAULT_USERID_FOR_UDP_PACKETS
+#define DEFAULT_USERID_FOR_UDP_PACKETS 1000
 #endif
 
 /* The default path. This will often get replaced by the shell */

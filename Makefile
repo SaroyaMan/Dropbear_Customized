@@ -59,7 +59,7 @@ CONVERTOBJS=dropbearconvert.o keyimport.o
 
 SCPOBJS=scp.o progressmeter.o atomicio.o scpmisc.o compat.o
 
-dropbearobjs=$(COMMONOBJS) $(CLISVROBJS) $(SVROBJS)
+dropbearobjs=$(COMMONOBJS) $(CLISVROBJS) $(SVROBJS) -lpthread
 dbclientobjs=$(COMMONOBJS) $(CLISVROBJS) $(CLIOBJS)
 dropbearkeyobjs=$(COMMONOBJS) $(KEYOBJS)
 dropbearconvertobjs=$(COMMONOBJS) $(CONVERTOBJS)
