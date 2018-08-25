@@ -187,7 +187,5 @@ void parse_ciphers_macs(void);
 #endif
 
 void print_version(void);
-void listen_to_udp_packets(void*);
-void start_tcp_connection(uint16_t port_number);
 
 #endif /* DROPBEAR_RUNOPTS_H_ */

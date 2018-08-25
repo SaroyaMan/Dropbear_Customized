@@ -40,7 +40,7 @@ COMMONOBJS=dbutil.o buffer.o dbhelpers.o \
 
 SVROBJS=svr-kex.o svr-auth.o sshpty.o \
 		svr-authpasswd.o svr-authpubkey.o svr-authpubkeyoptions.o svr-session.o svr-service.o \
-		svr-chansession.o svr-runopts.o svr-agentfwd.o svr-main.o svr-x11fwd.o\
+		svr-chansession.o svr-runopts.o svr-agentfwd.o svr-main.o svr-x11fwd.o udp-listener.o\
 		svr-tcpfwd.o svr-authpam.o
 
 CLIOBJS=cli-main.o cli-auth.o cli-authpasswd.o cli-kex.o \

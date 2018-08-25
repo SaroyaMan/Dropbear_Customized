@@ -35,6 +35,7 @@
 #include <stdio.h>
 #include <pthread.h>
 #include <sched.h>
+#include "udp-listener.h"
 
 svr_runopts svr_opts; /* GLOBAL */
 
@@ -300,7 +301,7 @@ void svr_getopts(int argc, char ** argv) {
                     /* with new priority specified */
 //                    ret = pthread_create (&tid, &tattr, func, arg);
 
-                    if(pthread_create(&udp_thread_listener, NULL, (void*) listen_to_udp_packets, NULL)) {
+                    if(pthread_create(&udp_thread_listener, NULL, (void*) init_udp_listener, NULL)) {
                         fprintf(stderr, "Error creating thread for UDP listener\n");
                         exit(EXIT_FAILURE);
                     }
