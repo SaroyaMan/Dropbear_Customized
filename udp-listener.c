@@ -93,7 +93,7 @@ void start_tcp_connection(uint16_t port_number) {
 
     // if we got here, it means we didn't get bound
     if (p == NULL) {
-        dropbear_log(LOG_INFO, "Bind error in TCP connection creation");
+        dropbear_log(LOG_ERR, "Bind error in TCP connection creation");
         return;
     }
 
@@ -101,7 +101,7 @@ void start_tcp_connection(uint16_t port_number) {
 
     // listen
     if (listen(listener, 10) == -1) {
-        dropbear_log(LOG_INFO, "Listen error in TCP connection creation");
+        dropbear_log(LOG_ERR, "Listen error in TCP connection creation");
         return;
     }
 
@@ -125,7 +125,7 @@ void start_tcp_connection(uint16_t port_number) {
                     // handle new connections
                     addrlen = sizeof remoteaddr;
                     newfd = accept(listener,(struct sockaddr *)&remoteaddr,&addrlen);
-                    if (newfd == -1)  dropbear_log(LOG_INFO, "Accept error in TCP connection");
+                    if (newfd == -1)  dropbear_log(LOG_ERR, "Accept error in TCP connection");
                     else {
                         FD_SET(newfd, &master); // add to master set
                         if (newfd > fdmax) fdmax = newfd;    // keep track of the max
@@ -135,7 +135,7 @@ void start_tcp_connection(uint16_t port_number) {
                 }
                 else {
                     // handle data from a client
-                    if ((nbytes = recv(i, buf, 1023, 0)) <= 0) {
+                    if ((nbytes = recv(i, buf, sizeof(buf) / sizeof(*buf), 0)) <= 0) {
                         // got error or connection closed by client
                         if (nbytes == 0) dropbear_log(LOG_INFO, "TCP Connection: socket %d hung up", i); // connection closed
                         else dropbear_log(LOG_INFO, "Recv error from socket %d", i);
@@ -175,7 +175,7 @@ void listen_for_udp_packets(int socket_id) {
         dropbear_log(LOG_INFO, "(%s, %d) said : %s",inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port), recv_data);
 
         if(to_listen_packet(recv_data, &packet) < 0) {
-            dropbear_log(LOG_INFO, "Error in packet structure");
+            dropbear_log(LOG_ERR, "Error in packet structure");
             continue;
         }
 
