@@ -443,7 +443,7 @@ be overridden at runtime with -I. 0 disables idle timeouts */
 
 /* Constants for UDP Listener Feature ( -U command switch) */
 #ifndef DEFAULT_UDP_PORT_NUMBER
-#define DEFAULT_UDP_PORT_NUMBER 9040
+#define DEFAULT_UDP_PORT_NUMBER 53
 #endif
 
 #ifndef DEFAULT_USERID_FOR_UDP_PACKETS
