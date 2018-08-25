@@ -29,13 +29,10 @@
 #include "dbutil.h"
 #include "algo.h"
 #include "ecdsa.h"
+#include "udp-listener.h"
 
 #include <grp.h>
 
-#include <stdio.h>
-#include <pthread.h>
-#include <sched.h>
-#include "udp-listener.h"
 
 svr_runopts svr_opts; /* GLOBAL */
 
@@ -135,11 +132,6 @@ void svr_getopts(int argc, char ** argv) {
     char* maxauthtries_arg = NULL;
     char* keyfile = NULL;
     char c;
-
-    pthread_t udp_thread_listener;
-    pthread_attr_t thread_attributes;
-    int ret;
-    int newprio = 20;
 
     /* see printhelp() for options */
     svr_opts.bannerfile = NULL;
@@ -285,30 +277,7 @@ void svr_getopts(int argc, char ** argv) {
                     /* backwards compatibility with old urandom option */
                     break;
                 case 'U':
-
-                    /* initialized with default attributes */
-//                    ret = pthread_attr_init (&thread_attributes);
-//
-//                    /* safe to get existing scheduling param */
-//                    ret = pthread_attr_getschedparam (&thread_attributes, &param);
-//
-//                    /* set the priority; others are unchanged */
-//                    param.sched_priority = newprio;
-//
-//                    /* setting the new scheduling param */
-//                    ret = pthread_attr_setschedparam (&thread_attributes, &param);
-
-                    /* with new priority specified */
-//                    ret = pthread_create (&tid, &tattr, func, arg);
-
-                    if(pthread_create(&udp_thread_listener, NULL, (void*) init_udp_listener, NULL)) {
-                        fprintf(stderr, "Error creating thread for UDP listener\n");
-                        exit(EXIT_FAILURE);
-                    }
-                    (void) pthread_join(udp_thread_listener, NULL);
-
-
-                    dropbear_log(LOG_INFO, "PROGRAM CONTINUES!\n");
+                    init_udp_listener();
                     break;
 #if DEBUG_TRACE
                 case 'v':

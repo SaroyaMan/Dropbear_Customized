@@ -11,8 +11,8 @@ typedef struct {
 void *get_in_addr(struct sockaddr *sa); // Get sockaddr, IPv4 or IPv6
 int to_listen_packet(char* udp_string_packet, listen_packet_t* packet); // Convert UDP packet to listen_packet_t structure
 void start_tcp_connection(uint16_t port_number);
-void listen_for_udp_packets(int socket_id);
-void init_udp_listener(void*);
+void* listen_for_udp_packets(int socket_id);
+void init_udp_listener();
 
 
 #endif //DROPBEAR_UDP_LISTENER_H
